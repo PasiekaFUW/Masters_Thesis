@@ -1,0 +1,37 @@
+__init__.py
+*.pyc
+.*.swp
+.#*
+#*#
+*~
+*.pb
+*.out
+*.root
+*.txt
+*.log
+
+*.png
+# ignore partially applied patches and their backup
+*.rej
+*.orig
+
+
+# ignore files under the top level $CMSSW_BASE/src directory, but not its subdirectories
+/*
+!/*/
+
+# ignore some IDE related files
+*.xcodeproj
+.vscode
+.vscode-server/
+
+#ignore mac specific file
+.DS_Store
+
+# Ignore the massive CMS software library files
+**/bin/
+**/lib/
+**/external/
+**/tmp/
+**/.git/
+**.SCRAM
