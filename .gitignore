@@ -28,10 +28,22 @@ __init__.py
 #ignore mac specific file
 .DS_Store
 
-# Ignore the massive CMS software library files
-**/bin/
-**/lib/
-**/external/
-**/tmp/
-**/.git/
-**.SCRAM
+
+# Ignore everything in CMSSW except the src directory
+CMSSW_15_1_0_pre4_PhaseII/biglib/
+CMSSW_15_1_0_pre4_PhaseII/bin/
+CMSSW_15_1_0_pre4_PhaseII/cfipython/
+CMSSW_15_1_0_pre4_PhaseII/config/
+CMSSW_15_1_0_pre4_PhaseII/doc/
+CMSSW_15_1_0_pre4_PhaseII/external/
+CMSSW_15_1_0_pre4_PhaseII/include/
+CMSSW_15_1_0_pre4_PhaseII/lib/
+CMSSW_15_1_0_pre4_PhaseII/logs/
+CMSSW_15_1_0_pre4_PhaseII/objs/
+CMSSW_15_1_0_pre4_PhaseII/python/
+CMSSW_15_1_0_pre4_PhaseII/static/
+CMSSW_15_1_0_pre4_PhaseII/test/
+CMSSW_15_1_0_pre4_PhaseII/tmp/
+CMSSW_15_1_0_pre4_PhaseII/venv/
+CMSSW_15_1_0_pre4_PhaseII/.SCRAM/
+
