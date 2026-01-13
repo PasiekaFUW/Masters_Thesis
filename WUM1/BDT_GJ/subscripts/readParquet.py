@@ -1,4 +1,5 @@
-#GJ
+#GJ, A script for opening and reading parquet files 
+
 import pandas as pd
 import os
 import glob

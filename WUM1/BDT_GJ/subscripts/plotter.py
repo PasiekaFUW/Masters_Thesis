@@ -1,4 +1,7 @@
 #GJ based on https://github.com/WiktorMat/ML_tau_pt/blob/master/inputs.py
+
+#Contains 3 different plotting functions: plot_clean_tree for tree visualization; plot_histogram_comparison for model prediction and test data; plot_resolution for comparing model predicitions and FastMTT results
+
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
@@ -56,30 +59,20 @@ def plot_clean_tree(model, tree_idx=0):
 
 
 
-def plot_physics_res(y_true, y_pred, label):
-    res = (y_pred - y_true) / y_true
-    
-    # Calculate Mean (Bias) and Width (Resolution)
-    mean_res = np.mean(res)
-    std_res = np.std(res)
-    
-    plt.hist(res, bins=60, range=(-1.8, 1.8), histtype='step', 
-             label=f'{label} (μ={mean_res:.3f}, σ={std_res:.3f})')
-
 
 def plot_histogram_comparison(y_arr, preds_arr, dim_idx, bins=60, range_vals=(0, 120), output_path=None):
     """Histogram comparing true vs predicted distributions for one dimension"""
-    base_dir = '/scratch/gjedrzej/WUM1/BDT_GJ'
-    plots_dir = os.path.join(base_dir, 'plots')
+    # base_dir = '/scratch/gjedrzej/WUM1/BDT_GJ'
+    # plots_dir = os.path.join(base_dir, 'plots')
     
-    # Create the 'plots' folder if it doesn't exist
-    if not os.path.exists(plots_dir):
-        os.makedirs(plots_dir)
+    # # Create the 'plots' folder if it doesn't exist
+    # if not os.path.exists(plots_dir):
+    #     os.makedirs(plots_dir)
 
 
-    if output_path is None:
-        filename = f"hist_true_vs_pred_dim{dim_idx+1}.png"
-        output_path = os.path.join(plots_dir, filename)
+    # if output_path is None:
+    #     filename = f"hist_true_vs_pred_dim{dim_idx+1}.png"
+    #     output_path = os.path.join(plots_dir, filename)
     
     plt.figure(figsize=(10, 6))
     plt.hist(y_arr[:, dim_idx], bins=bins, range=range_vals, alpha=0.5, label="True")
