@@ -27,7 +27,7 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.load("TrackingTools.RecoGeometry.RecoGeometries_cff")
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(10000), #10 000
+    input = cms.untracked.int32(1000), #10 000
     output = cms.optional.untracked.allowed(cms.int32,cms.PSet)
 )
 
@@ -40,12 +40,13 @@ process.source = cms.Source("PoolSource",
                             secondaryFileNames = cms.untracked.vstring(),
                                       dropDescendantsOfDroppedBranches=cms.untracked.bool(False),
           inputCommands=cms.untracked.vstring('keep *',
-                                              'drop *_l1tKMTFMuonsGmt_*_*'),
-          eventsToProcess = cms.untracked.VEventRange(
-            '1:1:4',
-            '1:2:139',
-            '1:2:169'
-          )  
+                                              'drop *_l1tKMTFMuonsGmt_*_*')
+        #                                       ,
+        #   eventsToProcess = cms.untracked.VEventRange(
+        #     '1:1:4',
+        #     '1:2:139',
+        #     '1:2:169'
+        #   )  
 )
 
 import glob
@@ -58,9 +59,10 @@ fileList = ['file:'+aFile for aFile in fileList]
 
 process.source.fileNames = cms.untracked.vstring(fileList)
 #print("Input files: ", process.source.fileNames) #GJ temporarily commented
-#'''
 
 
+
+'''
 process.MessageLogger.files.muCorrelatorEventPrint = dict()
 process.MessageLogger.cerr.noTimeStamps = cms.untracked.bool(True)
 process.MessageLogger.cerr.threshold = "DEBUG"
@@ -75,10 +77,16 @@ process.MessageLogger.cerr.SAMuonsWithCommonStubInfo = dict(limit = -1)
 process.MessageLogger.debugModules = ['simOmtfPhase2Digis', 'l1tGMTMuons', 'l1tGMTStubs', 'gmtDataDumper', 'SAMuonsWithCommonStubInfo']
 process.MessageLogger.debugModules = []
 
+'''
 
-# process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1000)
+
+process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1)
 process.options = cms.untracked.PSet(wantSummary = cms.untracked.bool(True))
-
+#Printing stubs GJ
+process.MessageLogger.cerr.threshold = "DEBUG"
+process.MessageLogger.cerr.SAMuon = dict(limit = -1)
+process.MessageLogger.cerr.TrackerMuon = dict(limit = -1)
+process.MessageLogger.debugModules = ['SAMuonsWithCommonStubInfo']
 
 
 # Geometry
@@ -171,12 +179,18 @@ process.endjob_step = cms.EndPath(process.endOfProcess)
 process.SimTrackFilter = cms.EDFilter("SimTrackFilter",
                                 minNumber = cms.uint32(1),
                                 src = cms.InputTag("g4SimHits"),
-                                cut = cms.string("abs(type)==13 && abs(momentum.pt)>10 && abs(momentum.eta)<1") 
+                                # eta = hwEta/240.*2.61 \ pt = (hwPt-1.)/2.
+                                cut = cms.string("abs(type)==13 && abs(momentum.pt)>10. && abs(momentum.eta)<1.") 
                                 # cut = cms.string("abs(type)==13")
                                 )
 process.GenMuFilterPath = cms.Path(process.SimTrackFilter)
 process.muAnalyzerPath = cms.Path(process.SimTrackFilter*process.omtfTree)
 
+#Adding Gen level filter to all paths
+for path in process.paths:
+    getattr(process, path)._seq = process.SimTrackFilter * getattr(process, path)._seq
+
+    
 # Schedule definition
 process.schedule = cms.Schedule(process.GenMuFilterPath,process.DTPhase2DigisPath,process.omtfPath,process.GMTPhase2Path,process.muAnalyzerPath,process.endjob_step)
 

@@ -1,19 +1,22 @@
+import os, sys
+from functools import partial
+
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
-import uproot as upr
-import awkward as ak
-from matplotlib.colors import LogNorm
-import shutil
-import os
-import mplhep as hep
 import matplotlib.pyplot as plt
-import numba as nb
-import re
-from numba import jit
+from matplotlib.colors import LogNorm
+
+import mplhep as hep
+
+# Add module paths
+# os.chdir('/home/akalinow/scratch/CMS/OMTF/PhaseII/PythonAnalysis/') #AK path
+# os.chdir('/scratch_cmsse/akalinow/CMS/OMTF/PhaseII/PythonAnalysis') #GJ path to AK
+os.chdir('/scratch/gjedrzej/Masters/CMS/OMTF/PhaseII/PythonAnalysis') #GJ path
+
+sys.path.append(os.path.join(os.getcwd(), "python"))
+import system_and_data as sd
 
 # Set the style for matplotlib and mplhep
-
 #hep.style.use("CMS")
 params = {'legend.fontsize': 'xx-large',
           'figure.figsize': (5, 5),
@@ -26,23 +29,64 @@ plt.rcParams.update(params)
 
 colors = ['red', 'blue', 'green', 'darkorange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan']
 
+# Additional selection for numerator
+bmtfQuery = '`theL1Obj.type` == 11' # BMTF candidates
+omtfQuery = '`theL1Obj.type` == 10' # OMTF candidates
+samQuery =  '`theL1Obj.type` == 16' # SAM Muons
+tkQuery =   '`theL1Obj.type` == 15' # Tracker Muons
+###############################################################################################################
+###############################################################################################################
+def plot1DHisto(df, column, bins=20, hlabel="", xlabel="", ylabel="", axis=None):
 
-# Make a filename with only alphanumeric characters
-def sanitize_filename(filename):
-    return re.sub(r'\W+', '_', filename)
+    if axis==None:
+        fig, axis = plt.subplots(1,1, figsize=(4,3))
+        axis.set_xlabel(xlabel)
+        axis.set_ylabel(ylabel)
 
-# Make the labels shorter example: SAMuon:prompt -> p SAMuon:displaced -> d
-def shorten_labels(labels):
-    shortened = []
-    for label in labels:
-        if ':' in label:
-            parts = label.split(':')
-            shortened.append(parts[1][0])
-        else:
-            shortened.append(''.join(word[0] for word in label.split()))
-    return shortened
+    counts, bins, _ = axis.hist(df[column], bins=bins, label=hlabel)
+    return counts, bins
+###############################################################################################################
+###############################################################################################################
+def plotEfficiency(df, column, filter, bins, hlabel, xlabel, ylabel, axis=None):
 
+    if axis==None:
+        fig, axis = plt.subplots(1,1, figsize=(4,3))
+        axis.set_xlabel(xlabel)
+        axis.set_ylabel(ylabel)
 
+    numerator, _ = np.histogram(filter(df)[0][column], bins)
+    denominator, _ = np.histogram(filter(df)[1][column], bins)
+    bin_centers = 0.5 * (bins[1:] + bins[:-1])
+
+    with np.errstate(divide='ignore', invalid='ignore'):  
+            eff = np.nan_to_num(numerator/denominator, nan=0.0)
+            eff_err = np.sqrt(eff * (1 - eff) / np.where(denominator > 0, denominator, 1))
+    
+    axis.errorbar(bin_centers, eff, yerr=eff_err, fmt='o', markersize=5, 
+                  capsize=5, linestyle='None', linewidth=3, label=hlabel)
+    
+    axis.set_ylim(0,1.05)    
+    return axis
+
+###############################################################################################################
+###############################################################################################################
+def plotEfficiencyManySystems(df, column, filterData, bins, xlabel):
+
+    axis = None
+    ylabel = 'Efficiency'
+
+    systems = {"TK":tkQuery, "BMTF":bmtfQuery, "OMTF":omtfQuery, "SAM":samQuery}
+    systems = {"TK":tkQuery, "SAM":samQuery, "BMTF":bmtfQuery}
+    for key, value in systems.items():
+        filter = partial(filterData, value)
+        axisTmp = plotEfficiency(df, column, filter, bins, key, xlabel, ylabel, axis=axis)
+        if axis==None:
+            axis = axisTmp
+    axis.legend(bbox_to_anchor=(1.05, 0, 0.5, 1));
+    return axis
+
+###############################################################################################################
+###############################################################################################################
 # Plot 1D histogram with comparison of multiple datasets
 def histogram_1D_comparison(datasets, dataset_labels, column, bins, xlabel, ylabel, title, fig_path, save=False, range=None):
     plt.figure()
@@ -59,14 +103,12 @@ def histogram_1D_comparison(datasets, dataset_labels, column, bins, xlabel, ylab
     hep.cms.text("Private")
 
     if save:
-        short_labels = shorten_labels(dataset_labels)
-        sanitized_title = sanitize_filename(f"{title}_{xlabel}_{'_'.join(short_labels)}")
+        short_labels = sd.shorten_labels(dataset_labels)
+        sanitized_title = sd.sanitize_filename(f"{title}_{xlabel}_{'_'.join(short_labels)}")
         plt.savefig(os.path.join(fig_path, sanitized_title + '.png'))
         print(f"Saved figure to {os.path.join(fig_path, sanitized_title + '.png')}")
-    else:
-        # plt.show()
-        print('')
-
+###############################################################################################################
+###############################################################################################################
 
 # Plot 2D histogram 
 def histogram_2D(data, column1, column2, bins, xlabel, ylabel, title, fig_path, save=False, log_scale=False, range=None):
@@ -75,7 +117,8 @@ def histogram_2D(data, column1, column2, bins, xlabel, ylabel, title, fig_path, 
         h = plt.hist2d(data[column1], data[column2], bins=bins, norm=LogNorm(), range=range)
         plt.colorbar(h[3], ax=plt.gca())
     else:
-        plt.hist2d(data[column1], data[column2], bins=bins, range=range)
+        h = plt.hist2d(data[column1], data[column2], bins=bins, range=range)
+        plt.colorbar(h[3], ax=plt.gca())
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.title(f"{title}")
@@ -83,12 +126,13 @@ def histogram_2D(data, column1, column2, bins, xlabel, ylabel, title, fig_path, 
     hep.cms.text("Private")
 
     if save:
-        sanitized_title = sanitize_filename(f"{title}_{ylabel}")
+        sanitized_title = sd.sanitize_filename(f"{title}_{ylabel}")
         plt.savefig(os.path.join(fig_path, sanitized_title + '.png'))
     else:   
         # plt.show()
         print('')
-
+###############################################################################################################
+###############################################################################################################
 
 # Calculate mean values for histogram bins
 def calculate_mean(data, column1, column2, bins):
@@ -99,7 +143,8 @@ def calculate_mean(data, column1, column2, bins):
     std_errors = data.groupby('bin', observed=False)[column2].sem()
     bin_centers = 0.5 * (bins[:-1] + bins[1:])
     return bin_centers, mean_values, (-min_values+mean_values, max_values-mean_values)
-
+###############################################################################################################
+###############################################################################################################
 
 # Plot mean values with error bars for comparison of multiple datasets
 def plot_mean_comparison(datasets, dataset_labels, column1, column2, bins, xlabel, ylabel, title, fig_path, save=False,density=False):
@@ -120,29 +165,34 @@ def plot_mean_comparison(datasets, dataset_labels, column1, column2, bins, xlabe
     hep.cms.text("Private")
 
     if save:
-        short_labels = shorten_labels(dataset_labels)
-        sanitized_title = sanitize_filename(f"{title}_{ylabel}_{'_'.join(short_labels)}")
+        short_labels = sd.shorten_labels(dataset_labels)
+        sanitized_title = sd.sanitize_filename(f"{title}_{ylabel}_{'_'.join(short_labels)}")
         print(f"Saved figure to {os.path.join(fig_path, sanitized_title + '.png')}")
         plt.savefig(os.path.join(fig_path, sanitized_title + '.png'))
     else:
         # plt.show()
         print('')
 
+###############################################################################################################
+###############################################################################################################
 # Plot efficiency comparison of multiple datasets
-def plot_efficiency_comparison(datasets_numerator, datasets_denominator, dataset_labels, column, bins, 
+def plot_efficiency_comparison(datasets, datasets_labels, column, bins, 
                                xlabel, ylabel, title, fig_path, save=False, ptCut=0):
     plt.figure()
     
-    for i, (data_num, data_den) in enumerate(zip(datasets_numerator, datasets_denominator)):
-        filtered_data_num = data_num[data_num['theL1Obj.pt'] >= ptCut]
-        hist1 = np.histogram(filtered_data_num[column], bins=bins)
-        hist2 = np.histogram(data_den[column], bins=bins)
+    for i, data in enumerate(datasets):
+        data = sd.match_gen_muons(data)
+        mask = data['theL1Obj.pt'] >= ptCut
+        hist1 = np.histogram(data[mask][column], bins=bins)
+        hist2 = np.histogram(data[column], bins=bins)
         with np.errstate(divide='ignore', invalid='ignore'):  
             eff = np.nan_to_num(hist1[0] / hist2[0], nan=0.0)
             eff_err = np.sqrt(eff * (1 - eff) / np.where(hist2[0] > 0, hist2[0], 1))
         bin_centers = 0.5 * (bins[1:] + bins[:-1])
 
-        plt.errorbar(bin_centers, eff, yerr=eff_err, fmt='o', markersize=10, color=colors[i % len(colors)], ecolor=colors[i % len(colors)], capsize=5, linestyle='None', linewidth=2, label=dataset_labels[i])
+        plt.errorbar(bin_centers, eff, yerr=eff_err, fmt='o', markersize=10, 
+                     color=colors[i % len(colors)], ecolor=colors[i % len(colors)], 
+                     capsize=5, linestyle='None', linewidth=2, label=datasets_labels[i])
     
     # Add vertical line for ptCut
     plt.axvline(ptCut, color='black', linestyle='--', linewidth=2, label=f'$p_T$ cut: {ptCut} GeV')
@@ -158,17 +208,16 @@ def plot_efficiency_comparison(datasets_numerator, datasets_denominator, dataset
     hep.cms.text("Private")
 
     if save:
-        short_labels = shorten_labels(dataset_labels)
-        sanitized_title = sanitize_filename(f"{title}_{ylabel}_{'_'.join(short_labels)}")
+        short_labels = sd.shorten_labels(datasets_labels)
+        sanitized_title = sd.sanitize_filename(f"{title}_{ylabel}_{'_'.join(short_labels)}")
         plt.savefig(os.path.join(fig_path, sanitized_title + '.png'))
     else:
         # plt.show()
         print('')
 
-
-
+###############################################################################################################
+###############################################################################################################
 # Plot efficiency for one dataset, different ptCuts
-
 def plot_efficiency_ptCuts_single_dataset(data_numerator, data_denominator, dataset_label, column, bins, xlabel, ylabel, title, fig_path, save=False, ptCuts=[0]):
     if save==True:
         plt.figure()
@@ -193,8 +242,8 @@ def plot_efficiency_ptCuts_single_dataset(data_numerator, data_denominator, data
         plt.legend()
         plt.grid(True) 
         hep.cms.text("Private")
-        short_label = shorten_labels([dataset_label])
-        sanitized_title = sanitize_filename(f"{title}_{ylabel}_ptCuts_{short_label}")
+        short_label = sd.shorten_labels([dataset_label])
+        sanitized_title = sd.sanitize_filename(f"{title}_{ylabel}_ptCuts_{short_label}")
         plt.savefig(os.path.join(fig_path, sanitized_title + '.png'))
     else:
         plt.xlabel(xlabel)
@@ -205,8 +254,8 @@ def plot_efficiency_ptCuts_single_dataset(data_numerator, data_denominator, data
         plt.legend()
         plt.grid(True) 
 
-
-
+###############################################################################################################
+###############################################################################################################
 # Plot efficiency for three eta ranges (EMTF, OMTF, BMTF) in one figure
 def plot_3_eta_ranges(data_numerator, data_denominator, dataset_label, column, bins, xlabel, ylabel, title, fig_path, save=False, ptCuts=[0]):
     fig, axs = plt.subplots(1, 3)  
@@ -239,11 +288,13 @@ def plot_3_eta_ranges(data_numerator, data_denominator, dataset_label, column, b
     plt.tight_layout()
 
     if save:
-        short_label = shorten_labels([dataset_label])
-        sanitized_title = sanitize_filename(f"{title}_{ylabel}_{short_label}_3plots")
+        short_label = sd.shorten_labels([dataset_label])
+        sanitized_title = sd.sanitize_filename(f"{title}_{ylabel}_{short_label}_3plots")
         plt.savefig(os.path.join(fig_path, sanitized_title + '.png'))
     else:
         # plt.show() 
         print('')
+###############################################################################################################
+###############################################################################################################
 
 
