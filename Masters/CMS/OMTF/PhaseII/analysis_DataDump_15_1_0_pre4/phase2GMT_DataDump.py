@@ -27,7 +27,7 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.load("TrackingTools.RecoGeometry.RecoGeometries_cff")
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(1000), #10 000
+    input = cms.untracked.int32(1000000), #10 000
     output = cms.optional.untracked.allowed(cms.int32,cms.PSet)
 )
 
@@ -180,8 +180,8 @@ process.SimTrackFilter = cms.EDFilter("SimTrackFilter",
                                 minNumber = cms.uint32(1),
                                 src = cms.InputTag("g4SimHits"),
                                 # eta = hwEta/240.*2.61 \ pt = (hwPt-1.)/2.
-                                cut = cms.string("abs(type)==13 && abs(momentum.pt)>10. && abs(momentum.eta)<1.") 
-                                # cut = cms.string("abs(type)==13")
+                                cut = cms.string("abs(type)==13 && abs(momentum.pt)>20 && abs(momentum.eta)<0.84 && abs(momentum.eta)>0.80") 
+                                # cut = cms.string("abs(type)==13 && abs(momentum.pt)>10. && abs(momentum.eta)<1.") 
                                 )
 process.GenMuFilterPath = cms.Path(process.SimTrackFilter)
 process.muAnalyzerPath = cms.Path(process.SimTrackFilter*process.omtfTree)
