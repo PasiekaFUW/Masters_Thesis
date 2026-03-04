@@ -99,9 +99,10 @@ int Phase2SATrackerMatch::findBestTrackerMuon(const l1t::SAMuon & samuon,
             ///type==1 && etaQuality==0 - DT coarse eta coordinate
             ///type==1 && etaQuality==1 - DT with single eta coordinate
             ///type==1 && etaQuality==3 - DT with two eta coordinates
-
-            int samuonStubCoord1 = samuonStub->type()==1 ? samuonStub->coord1()/256: samuonStub->coord1(); //use the same scale as in hybrid stubs
-            int samuonStubCoord2 = samuonStub->type()==1 ? samuonStub->coord2()/256: samuonStub->coord2(); //use the same scale as in hybrid stubs
+          
+            bool isBMTFStub = (samuon.tfType() == l1t::tftype::bmtf);
+            int samuonStubCoord1 = (samuonStub->type() == 1 && isBMTFStub) ? samuonStub->coord1() / 256 : samuonStub->coord1(); //use the same scale as in hybrid stubs
+            int samuonStubCoord2 = (samuonStub->type() == 1 && isBMTFStub) ? samuonStub->coord2() / 256 : samuonStub->coord2(); //use the same scale as in hybrid stubs
 
             LogDebug("SAMuon") << "samuonStubCoord1: " << samuonStubCoord1
                                << ", samuonStubCoord2: " << samuonStubCoord2
