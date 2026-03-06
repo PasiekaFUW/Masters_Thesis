@@ -1,0 +1,3 @@
+/scratch/gjedrzej/CEPP/Tut2/ClassA/build/CMakeFiles/myApplication.dir
+/scratch/gjedrzej/CEPP/Tut2/ClassA/build/CMakeFiles/edit_cache.dir
+/scratch/gjedrzej/CEPP/Tut2/ClassA/build/CMakeFiles/rebuild_cache.dir
