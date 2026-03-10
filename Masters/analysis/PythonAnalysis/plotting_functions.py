@@ -11,7 +11,7 @@ import mplhep as hep
 # Add module paths
 # os.chdir('/home/akalinow/scratch/CMS/OMTF/PhaseII/PythonAnalysis/') #AK path
 # os.chdir('/scratch_cmsse/akalinow/CMS/OMTF/PhaseII/PythonAnalysis') #GJ path to AK
-os.chdir('/scratch/gjedrzej/Masters/analysis/PythonAnalysis') #GJ path
+os.chdir('/scratch1/gjedrzej/Masters/analysis/PythonAnalysis') #GJ path
 
 sys.path.append(os.path.join(os.getcwd(), "python"))
 import system_and_data as sd
