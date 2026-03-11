@@ -1,0 +1,3 @@
+/dmj/2020/gj428515/Studies/Masters_Thesis/CEPP/Tut2/homework/build/CMakeFiles/myApp.dir
+/dmj/2020/gj428515/Studies/Masters_Thesis/CEPP/Tut2/homework/build/CMakeFiles/edit_cache.dir
+/dmj/2020/gj428515/Studies/Masters_Thesis/CEPP/Tut2/homework/build/CMakeFiles/rebuild_cache.dir

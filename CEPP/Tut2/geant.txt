@@ -1,0 +1,12 @@
+echo $DISPLAY       ->#localhost:10.0
+
+export APPTAINERENV_DISPLAY=$DISPLAY
+
+~akalinow/Publiczny/Computing_in_Experimental_Particle_Physics/cepp_container
+
+Apptainer> cd Tut2/homework/
+Apptainer> source /opt/geant4/install/bin/geant4.sh
+Apptainer> mkdir build
+Apptainer> cd build/
+Apptainer> cmake ..
+Apptainer> ./myApp 
