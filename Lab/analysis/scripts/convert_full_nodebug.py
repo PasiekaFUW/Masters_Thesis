@@ -277,7 +277,7 @@ def extract_data(filename, exportname):
 def clean_pd(df):
     #clean nulls
     print(f"Number of events before cleaning: {len(df)}")
-    df = df.dropna(subset=['EvtNum', 'CurrentType', 'InteractionType'])
+    df = df.dropna(subset=['EvtNum', 'CCNC', 'IntType'])
     df.info()
     df.head()
     print(f"Number of events after cleaning: {len(df)}")

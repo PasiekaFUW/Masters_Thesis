@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import pandas as pd
 
 #Visualize
 def visualize_data(df):
@@ -90,3 +91,43 @@ def visualize_kg(df):
     axes[1,1].grid(alpha=0.3)
 
     plt.show()
+
+
+
+
+def plot_tau_energy(df):
+    # Lista na zebrane energie
+    tau_energies = []
+    
+    # ID cząstek dla taonu (15) i antytaonu (-15)
+    tau_pdg_ids = [15, -15]
+    
+    # Przeszukujemy wszystkie 28 slotów cząstek zdefiniowanych w Twoim nagłówku
+    for i in range(1, 29):
+        pdg_col = f'Pdg_{i}'
+        energy_col = f'E_{i}'
+        
+        # Sprawdzamy, czy kolumny istnieją w df (bezpiecznik)
+        if pdg_col in df.columns and energy_col in df.columns:
+            # Wybieramy tylko te wiersze, gdzie w danym slocie jest Taon
+            mask = df[pdg_col].isin(tau_pdg_ids)
+            
+            # Wyciągamy wartości energii dla tych wierszy i dodajemy do listy
+            found_energies = df.loc[mask, energy_col].tolist()
+            tau_energies.extend(found_energies)
+
+    if not tau_energies:
+        print("No taons in the data frame).")
+        return
+
+    # Tworzenie wykresu
+    plt.figure(figsize=(10, 6))
+    plt.hist(tau_energies, bins=50, color='darkorange', edgecolor='black', alpha=0.7)
+    
+    plt.title('$ \\pm \\tau$ energy distribution')
+    plt.xlabel('Energy [GeV]')
+    plt.ylabel('Particle count')
+    plt.grid(axis='y', linestyle=':', alpha=0.6)
+    
+    plt.show()
+
