@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 
 #Visualize
 def visualize_data(df):
@@ -122,12 +123,14 @@ def plot_tau_energy(df):
 
     # Tworzenie wykresu
     plt.figure(figsize=(10, 6))
-    plt.hist(tau_energies, bins=50, color='darkorange', edgecolor='black', alpha=0.7)
+    plt.hist(tau_energies, bins=80, color='darkorange', edgecolor='black', alpha=0.7)
+    plt.xticks(np.arange(0, 85, step=5))
+    plt.minorticks_on()
     
     plt.title('$ \\pm \\tau$ energy distribution')
     plt.xlabel('Energy [GeV]')
     plt.ylabel('Particle count')
-    plt.grid(axis='y', linestyle=':', alpha=0.6)
+    plt.grid(axis='both', linestyle=':', alpha=0.6)
     
     plt.show()
 
