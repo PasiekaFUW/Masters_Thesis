@@ -165,10 +165,12 @@ def plot_physics_analysis(dfs, mode, feature='multiplicity', titles=["Signal CC"
         'SigmaC++': [4222],
         'Lambda': [3122, -3122],
         'LambdaC+': [4122],
+
         'muons': [13, -13],
         'electrons': [11, -11],
         'taus': [15, -15],
         'gamma': [22],
+        
         'pi+-': [211, -211],
         'pi_0': [111],
         'K+-': [321, -321], 
@@ -314,7 +316,9 @@ def plot_physics_analysis(dfs, mode, feature='multiplicity', titles=["Signal CC"
         
         # Wybieramy tylko te komórki, gdzie maska jest True
         return p_matrix[mask]
+    
 
+    
     def get_all_pt(df):
         pdg_cols = [c for c in df.columns if c.startswith('Pdg_')]
         mask = df[pdg_cols].isin(selected_pdgs).values
