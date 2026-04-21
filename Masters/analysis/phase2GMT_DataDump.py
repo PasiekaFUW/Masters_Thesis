@@ -27,7 +27,7 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.load("TrackingTools.RecoGeometry.RecoGeometries_cff")
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(1000000), #10 000
+    input = cms.untracked.int32(10000), #10 000
     output = cms.optional.untracked.allowed(cms.int32,cms.PSet)
 )
 
