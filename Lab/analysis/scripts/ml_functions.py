@@ -2,7 +2,7 @@ import importlib
 import analysis.scripts.plotting_functions as pf
 importlib.reload(pf)
 
-def get_balanced_subset(df, cc_per_type=25, nc_per_type=100):
+def get_balanced_subset(df, cc_per_type=25, nc_per_type=25):
     import pandas as pd
     """
     Filters the dataframe to get a specific number of CC and NC events 
