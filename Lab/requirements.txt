@@ -4,10 +4,10 @@ awkward==2.8.9
 
 # Physics Data & Arrays
 pandas==2.3.3
-numpy==2.0.2
+numpy==1.26.4
 
 # Machine Learning
-
+tensorflow==2.16.1
 
 # Plotting & Visualization
 matplotlib==3.9.4
