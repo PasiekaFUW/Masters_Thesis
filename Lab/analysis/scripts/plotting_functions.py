@@ -423,3 +423,90 @@ def plot_feature_from_dataset(dataset, feature_idx, feature_name=None, ax=None, 
     ax.legend()
     
     return ax
+
+def plotTrainHistory(history):
+  fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+  axes[0].plot(history.history['loss'], 'blue', label = 'test')
+  axes[0].plot(history.history['val_loss'], 'orange', label = 'validation')
+  axes[0].set_title('Loss function')
+  axes[0].set_xlabel('Epoch')
+  axes[0].legend(loc='upper right')
+
+  axes[1].plot(history.history['loss'], 'blue', label = 'test')
+  axes[1].plot(history.history['val_loss'], 'orange', label = 'validation')
+  axes[1].set_title('Loss Function Log')
+  axes[1].set_xlabel('Epoch')
+  axes[1].set_yscale('log')
+  axes[1].legend(loc='upper right')
+
+  plt.subplots_adjust(bottom = 0.02, left = 0.02, right = 0.98, wspace = 0.4)
+  plt.show()
+
+
+
+
+
+
+def plot_physics_results(df, column='CCNC', ccnc_filter=None, int_filter=None, ax=None, density=False, color='skyblue', bins=None):
+    import matplotlib.pyplot as plt
+    import numpy as np
+    """
+    column: 'CCNC', 'IntType', 'Prob_is_CC', or 'NN_Decision_CC'
+    ccnc_filter: 'CC' or 'NC' (Optional)
+    int_filter: 'QES', 'MEC', 'RES', or 'DIS' (Optional)
+    """
+    # 1. Apply Filters
+    subset = df.copy()
+    if ccnc_filter:
+        subset = subset[subset['CCNC'] == ccnc_filter]
+    if int_filter:
+        subset = subset[subset['IntType'] == int_filter]
+
+    # 2. Setup Axes
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(6, 4))
+
+    if subset.empty:
+        ax.text(0.5, 0.5, "No Data Found", ha='center', va='center')
+        return ax
+
+    # 3. Categorical Plots (CCNC, IntType, NN_Decision_CC)
+    if column in ['CCNC', 'IntType', 'NN_Decision_CC']:
+        labels, counts = np.unique(subset[column], return_counts=True)
+        
+        # Manual Density Calculation for Bars
+        display_counts = counts.astype(float)
+        if density:
+            display_counts /= counts.sum()
+            y_label = "Density"
+        else:
+            y_label = "Events"
+
+        # Use the 'color' argument passed to the function
+        ax.bar([str(l) for l in labels], display_counts, alpha=0.7, edgecolor='black', color=color)
+        ax.set_ylabel(y_label)
+        ax.set_title(f"Distribution of {column}")
+
+    # 4. Probability Plots (Prob_is_CC)
+    elif column == 'Prob_is_CC':
+        if bins is None:
+            bins = np.linspace(0, 1, 21)
+        cc_vals = subset[subset['CCNC'] == 'CC'][column]
+        nc_vals = subset[subset['CCNC'] == 'NC'][column]
+
+
+        if not nc_vals.empty:
+            w_nc = np.ones_like(nc_vals) / len(nc_vals) if density else None
+            ax.hist(nc_vals, bins=bins, weights=w_nc, density=density, edgecolor='black', alpha=0.5, histtype='stepfilled', label='NC_meta', color='green', lw=2)
+        if not cc_vals.empty:
+            w_cc = np.ones_like(cc_vals) / len(cc_vals) if density else None
+            ax.hist(cc_vals, bins=bins, weights=w_cc, density=density, edgecolor='black', alpha=0.5, histtype='stepfilled', label='CC_meta', color='blue', lw=2)
+        
+        ax.set_xlabel("CC Probability")
+        ax.set_ylabel("Density" if density else "Events")
+        ax.legend()
+        ax.set_title(f"Separation: {int_filter if int_filter else 'All'}")
+
+    ax.grid(axis='y', alpha=0.3, ls='--')
+    return ax
+
