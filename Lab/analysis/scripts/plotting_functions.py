@@ -365,15 +365,30 @@ def plot_physics_single_canva(dfs, mode, feature='multiplicity', titles=["All (C
     return ax
 
 
+# feature_matrix = np.column_stack([
+#     np.nan_to_num(ch_lead_pt),
+#     np.nan_to_num(ch_lead_p),
+#     np.nan_to_num(ch_lead_theta),
+#     ch_pion_mult,
+#     ch_charged_mult,
+#     n_pion_mult,
+#     np.nan_to_num(n_lead_theta),
+#     np.nan_to_num(n_lead_p)
+    
+# ]).astype(np.float32)
+
 # The "Cheat Sheet" - update this if you change your preProcess_data logic
 FEATURE_INDEX_MAP = {
-    0: "Ch Pion Multiplicity",
+
+    0: "Ch Leading pt [GeV/c]",
     1: "Ch Leading p [GeV/c]",
     2: "Ch Leading Theta [deg]",
-    3: "Ch Leading pt [GeV/c]",
-    4: "Neutral Pion Multiplicity",
-    5: "Neutral Leading p [GeV/c]",
-    6: "Neutral Leading Theta [deg]"
+    3: "Ch Pion Multiplicity",
+    4: "Charged Particles Multiplicity",
+    5: "Neutral Pion Multiplicity",
+    6: "Neutral Leading Theta [deg]",
+    7: "Neutral Leading p [GeV/c]"
+   
 }
 
 def plot_feature_from_dataset(dataset, feature_idx, feature_name=None, ax=None, density=False):
@@ -399,15 +414,22 @@ def plot_feature_from_dataset(dataset, feature_idx, feature_name=None, ax=None, 
     if ax is None:
         fig, ax = plt.subplots(figsize=(8, 5))
 
-    # Multiplicity indices (0 and 4) get discrete bins
-    is_discrete = feature_idx in [0, 4]
+    # Multiplicity indices get discrete bins
+    is_discrete = feature_idx in [3, 4, 5]
     all_vals = cc_data + nc_data
     
     if is_discrete and all_vals:
         max_val = int(max(all_vals))
         bins = np.arange(0, max_val + 2) - 0.5
-        ax.set_xticks(range(max_val + 1))
+        if max_val <= 20:
+            ax.set_xticks(range(max_val + 1))
+        else:
+            # Let Matplotlib decide automatically for large ranges
+            ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))
+            
         rwidth = 0.8
+        # ax.set_xticks(range(max_val + 1))
+        # rwidth = 0.8
     else:
         bins = 50
         rwidth = 1.0
@@ -426,13 +448,13 @@ def plot_feature_from_dataset(dataset, feature_idx, feature_name=None, ax=None, 
 
 def plotTrainHistory(history):
   fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-  axes[0].plot(history.history['loss'], 'blue', label = 'test')
+  axes[0].plot(history.history['loss'], 'blue', label = 'train')
   axes[0].plot(history.history['val_loss'], 'orange', label = 'validation')
   axes[0].set_title('Loss function')
   axes[0].set_xlabel('Epoch')
   axes[0].legend(loc='upper right')
 
-  axes[1].plot(history.history['loss'], 'blue', label = 'test')
+  axes[1].plot(history.history['loss'], 'blue', label = 'train')
   axes[1].plot(history.history['val_loss'], 'orange', label = 'validation')
   axes[1].set_title('Loss Function Log')
   axes[1].set_xlabel('Epoch')
@@ -510,3 +532,113 @@ def plot_physics_results(df, column='CCNC', ccnc_filter=None, int_filter=None, a
     ax.grid(axis='y', alpha=0.3, ls='--')
     return ax
 
+
+def plotConfusionMatrix(df, label_col='CCNC', pred_col='NN_Decision_CC', title="Confusion Matrix", ax=None, cmap='Blues'):
+    from sklearn.metrics import ConfusionMatrixDisplay
+    import matplotlib.pyplot as plt
+    
+    # 1. Map labels to integers (NC=0, CC=1)
+    mapping = {"NC": 0, "CC": 1}
+    y_true = df[label_col].map(mapping).fillna(df[label_col]).astype(int)
+    y_pred = df[pred_col].astype(int)
+
+    # 2. Handle axis creation
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(5, 5))
+
+    # 3. Plot
+    cmd = ConfusionMatrixDisplay.from_predictions(
+        y_true, 
+        y_pred, 
+        display_labels=["NC", "CC"], 
+        normalize="true", 
+        values_format=".2f", 
+        ax=ax,
+        cmap=cmap
+    )
+    
+    ax.set_title(title)
+    
+    return ax
+
+def plotROC(df, label_col='CCNC', prob_col='Prob_is_CC', model_name="1DCNN", ax=None):
+    from sklearn.metrics import RocCurveDisplay, roc_auc_score
+    import matplotlib.pyplot as plt
+    
+    # 1. Map labels to integers
+    mapping = {"NC": 0, "CC": 1}
+    y_true = df[label_col].map(mapping).fillna(df[label_col]).astype(int)
+    y_score = df[prob_col]
+
+    # 2. Create axis if not provided (allows for subplots)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(6, 6))
+
+    # 3. Plotting
+    RocCurveDisplay.from_predictions(
+        y_true, 
+        y_score, 
+        name=model_name,
+        color="darkorange",
+        ax=ax
+    )
+
+    # Add the "Chance" line
+    ax.plot([0, 1], [0, 1], "k--", label="Chance (AUC = 0.50)")
+
+    ax.set_title(f"ROC Curve - {model_name}")
+    ax.set_xlabel("False Positive Rate")
+    ax.set_ylabel("True Positive Rate")
+    ax.legend()
+    ax.grid(alpha=0.3)
+
+    # 4. Print score and return the axis
+    auc_value = roc_auc_score(y_true, y_score)
+    print(f"{model_name} ROC AUC: {auc_value:.4f}")
+    
+    return ax
+
+
+def plotFeatureImportance(model, data_batch, feature_map=FEATURE_INDEX_MAP, title="Feature Dependency (Saliency Map)"):
+    import tensorflow as tf
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    # 1. Calculate Importance via Backprop
+    # Extract one batch from the tf.data.Dataset
+    for images, labels in data_batch.take(1):
+        input_tensor = tf.convert_to_tensor(images)
+        break
+    
+    with tf.GradientTape() as tape:
+        tape.watch(input_tensor)
+        predictions = model(input_tensor)
+        
+    # Get gradients of output w.r.t input
+    grads = tape.gradient(predictions, input_tensor)
+    
+    # Average the absolute gradient magnitude across the batch
+    # This gives us a global sense of which features "move the needle" most
+    importance = tf.reduce_mean(tf.abs(grads), axis=0).numpy().flatten()
+    
+    # 2. Map indices to names
+    feature_names = [feature_map.get(i, f"feat_{i}") for i in range(len(importance))]
+
+    # 3. Plotting
+    fig, ax = plt.subplots(figsize=(10, 5))
+    
+    # Using a horizontal bar chart often makes long physics labels easier to read
+    bars = ax.barh(feature_names, importance, color='teal', edgecolor='black', alpha=0.8)
+    
+    ax.set_title(title, fontsize=14, fontweight='bold')
+    ax.set_xlabel("Sensitivity (Mean |Gradient|)")
+    ax.set_ylabel("Physics Feature")
+    ax.grid(axis='x', linestyle='--', alpha=0.6)
+    
+    # Invert y-axis so the first feature (index 0) is at the top
+    ax.invert_yaxis() 
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return ax

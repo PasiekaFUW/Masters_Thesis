@@ -70,6 +70,9 @@ def preProcess_data(balanced, batch_size=32, shuffle=False):
 
     # We call our external functions once on the entire 'balanced' dataframe.
 
+    #charged
+    ch_charged_mult  = pf.calc_multiplicity(balanced, 'charged')
+
     # Charged Pion Features
     ch_pion_mult  = pf.calc_multiplicity(balanced, 'ch_pions')
     ch_lead_p     = pf.calc_max_momentum(balanced, 'ch_pions')
@@ -84,17 +87,21 @@ def preProcess_data(balanced, batch_size=32, shuffle=False):
     # --- STEP 3: Handle NaNs and Packaging ---
     #
     #the order is important - one type grouped, p next to pt and thetas next to each others
+    #changing this order influences some plotting functions!
     #
     # When a particle type doesn't exist in an event, leading features return NaN.
     # We replace these with 0.0 for the neural network.
+
     feature_matrix = np.column_stack([
-        ch_pion_mult,
-        np.nan_to_num(ch_lead_p),
         np.nan_to_num(ch_lead_pt),
+        np.nan_to_num(ch_lead_p),
         np.nan_to_num(ch_lead_theta),
+        ch_pion_mult,
+        ch_charged_mult,
+        n_pion_mult,
         np.nan_to_num(n_lead_theta),
-        np.nan_to_num(n_lead_p),
-        n_pion_mult
+        np.nan_to_num(n_lead_p)
+        
     ]).astype(np.float32)
 
     # Label: CC = 1, NC = 0

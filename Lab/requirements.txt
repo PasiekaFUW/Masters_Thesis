@@ -8,6 +8,8 @@ numpy==1.26.4
 
 # Machine Learning
 tensorflow==2.16.1
+comet_ml==3.57.3
+scikit-learn==1.6.1
 
 # Plotting & Visualization
 matplotlib==3.9.4
