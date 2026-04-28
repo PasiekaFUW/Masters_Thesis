@@ -392,56 +392,62 @@ FEATURE_INDEX_MAP = {
 }
 
 def plot_feature_from_dataset(dataset, feature_idx, feature_name=None, ax=None, density=False):
-    """
-    Plots a feature from the TF dataset. If feature_name is None, 
-    it looks up the name in FEATURE_INDEX_MAP.
-    """
-    # Look up the name automatically if not provided
     if feature_name is None:
         feature_name = FEATURE_INDEX_MAP.get(feature_idx, f"Feature {feature_idx}")
 
     cc_data = []
     nc_data = []
 
+    # 1. Collect data from the generator
     for features, labels in dataset:
         feat_np = features.numpy()
         lab_np = labels.numpy()
-        val = feat_np[:, feature_idx]
+        # Flattening to ensure we have 1D arrays for the histogram
+        val = feat_np[:, feature_idx].flatten()
         
         cc_data.extend(val[lab_np == 1.0])
         nc_data.extend(val[lab_np == 0.0])
 
+    cc_data = np.array(cc_data)
+    nc_data = np.array(nc_data)
+
     if ax is None:
         fig, ax = plt.subplots(figsize=(8, 5))
 
-    # Multiplicity indices get discrete bins
-    is_discrete = feature_idx in [3, 4, 5]
-    all_vals = cc_data + nc_data
+    # --- Physics Binning Logic ---
+    is_discrete = feature_idx in [3, 4, 5] # Multiplicities
     
-    if is_discrete and all_vals:
-        max_val = int(max(all_vals))
-        bins = np.arange(0, max_val + 2) - 0.5
-        if max_val <= 20:
-            ax.set_xticks(range(max_val + 1))
-        else:
-            # Let Matplotlib decide automatically for large ranges
-            ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))
-            
+    # Calculate common limits
+    all_vals = np.concatenate([cc_data, nc_data])
+    if len(all_vals) == 0: return ax
+    
+    min_val, max_val = all_vals.min(), all_vals.max()
+
+    if is_discrete:
+        # Align bins to integer centers
+        common_bins = np.arange(0, int(max_val) + 2) - 0.5
         rwidth = 0.8
-        # ax.set_xticks(range(max_val + 1))
-        # rwidth = 0.8
+        if max_val <= 20:
+            ax.set_xticks(range(int(max_val) + 1))
     else:
-        bins = 50
+        # Use a higher resolution for continuous physics variables
+        common_bins = np.linspace(min_val, max_val, 100)
         rwidth = 1.0
 
-    ax.hist([cc_data, nc_data], bins=bins, 
-             label=['CC (Signal)', 'NC (Background)'], 
-             color=['blue', 'green'], alpha=0.7, 
-             edgecolor='black', rwidth=rwidth, density=density)
+    # 2. Plotting with shared bins
+    ax.hist(cc_data, bins=common_bins, label='CC (Signal)', 
+            color='blue', alpha=0.5, edgecolor='black', 
+            density=density, rwidth=rwidth)
+    
+    ax.hist(nc_data, bins=common_bins, label='NC (Background)', 
+            color='green', alpha=0.5, edgecolor='black', 
+            density=density, rwidth=rwidth)
 
+    # Formatting
     ax.set_title(f"Dataset Check: {feature_name}")
     ax.set_xlabel(feature_name)
     ax.set_ylabel("Probability Density" if density else "Counts")
+    ax.grid(axis='both', linestyle=':', alpha=0.6)
     ax.legend()
     
     return ax

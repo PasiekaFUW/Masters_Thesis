@@ -120,3 +120,63 @@ def preProcess_data(balanced, batch_size=32, shuffle=False):
 
     # Returning 'balanced' as processed_data to keep your return signature consistent
     return test_data
+
+def get_physics_informed_split(df, total_train_size=1000, total_val_size=400):
+    import pandas as pd
+    import numpy as np
+
+    interaction_types = ['DIS', 'RES', 'QES', 'MEC']
+    
+    # 1. Calculate the "Natural" Ratios from the source data
+    total_counts = len(df)
+    global_cc_prop = len(df[df['CCNC'] == 'CC']) / total_counts
+    global_nc_prop = len(df[df['CCNC'] == 'NC']) / total_counts
+
+    # 2. Setup storage
+    train_samples = []
+    val_samples = []
+
+    # Training needs to be balanced (50/50 CC/NC and equal IntTypes)
+    # total_train_size / (2 classes * 4 types)
+    train_per_type = total_train_size // 8 
+
+    for itype in interaction_types:
+        for ccnc in ['CC', 'NC']:
+            # Create a localized pool for this specific slice
+            pool = df[(df['CCNC'] == ccnc) & (df['IntType'] == itype)].sample(frac=1, random_state=42)
+            
+            # --- TRAINING SELECTION (Balanced) ---
+            # We take the training slice first
+            train_slice = pool.iloc[:train_per_type]
+            train_samples.append(train_slice)
+            
+            # --- VALIDATION SELECTION (Physical) ---
+            # We calculate how many we need based on the global physical ratio
+            # and the internal distribution of that interaction type within that class
+            class_prop = global_cc_prop if ccnc == 'CC' else global_nc_prop
+            
+            # Get internal prop: e.g., "What % of CCs are DIS?"
+            internal_itype_prop = len(df[(df['CCNC'] == ccnc) & (df['IntType'] == itype)]) / len(df[df['CCNC'] == ccnc])
+            
+            # Target count = total_val * class_prop (CC vs NC) * itype_prop (DIS vs RES...)
+            val_target_count = int(total_val_size * class_prop * internal_itype_prop)
+            
+            # START validation from where training ended to ensure 0% overlap
+            val_slice = pool.iloc[train_per_type : train_per_type + val_target_count]
+            val_samples.append(val_slice)
+
+            # Safety Check
+            if len(pool) < (train_per_type + val_target_count):
+                print(f"⚠️ Warning: Insufficient data for {ccnc}-{itype}. Requested {train_per_type + val_target_count}, have {len(pool)}")
+
+    # 3. Finalize and Shuffle
+    train_df = pd.concat(train_samples).sample(frac=1).reset_index(drop=True)
+    val_df = pd.concat(val_samples).sample(frac=1).reset_index(drop=True)
+    
+    # --- Final Audit ---
+    print(f" Split Complete. Overlap Check: {len(pd.merge(train_df, val_df, how='inner'))} shared events.")
+    print(f"\n[Validation Set Physics Profile]")
+    print(f"CC/NC Ratio: {val_df['CCNC'].value_counts(normalize=True).to_dict()}")
+    print(f"Interaction Type Ratios:\n{val_df['IntType'].value_counts(normalize=True)}")
+    
+    return train_df, val_df
