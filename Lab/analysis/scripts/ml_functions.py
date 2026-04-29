@@ -121,7 +121,9 @@ def preProcess_data(balanced, batch_size=32, shuffle=False):
     # Returning 'balanced' as processed_data to keep your return signature consistent
     return test_data
 
-def get_physics_informed_split(df, total_train_size=1000, total_val_size=400):
+
+
+def get_physics_informed_split(df, total_train_size=1000, total_val_size=400, total_test_size=400):
     import pandas as pd
     import numpy as np
 
@@ -135,6 +137,7 @@ def get_physics_informed_split(df, total_train_size=1000, total_val_size=400):
     # 2. Setup storage
     train_samples = []
     val_samples = []
+    test_samples = []
 
     # Training needs to be balanced (50/50 CC/NC and equal IntTypes)
     # total_train_size / (2 classes * 4 types)
@@ -151,32 +154,47 @@ def get_physics_informed_split(df, total_train_size=1000, total_val_size=400):
             train_samples.append(train_slice)
             
             # --- VALIDATION SELECTION (Physical) ---
-            # We calculate how many we need based on the global physical ratio
-            # and the internal distribution of that interaction type within that class
             class_prop = global_cc_prop if ccnc == 'CC' else global_nc_prop
-            
-            # Get internal prop: e.g., "What % of CCs are DIS?"
             internal_itype_prop = len(df[(df['CCNC'] == ccnc) & (df['IntType'] == itype)]) / len(df[df['CCNC'] == ccnc])
             
-            # Target count = total_val * class_prop (CC vs NC) * itype_prop (DIS vs RES...)
             val_target_count = int(total_val_size * class_prop * internal_itype_prop)
             
             # START validation from where training ended to ensure 0% overlap
             val_slice = pool.iloc[train_per_type : train_per_type + val_target_count]
             val_samples.append(val_slice)
 
+            # --- TESTING SELECTION (Physical) ---
+            # Use the exact same physical proportions for the test set
+            test_target_count = int(total_test_size * class_prop * internal_itype_prop)
+            
+            # START testing from where validation ended to ensure 0% overlap with BOTH train and val
+            start_test_idx = train_per_type + val_target_count
+            end_test_idx = start_test_idx + test_target_count
+            
+            test_slice = pool.iloc[start_test_idx : end_test_idx]
+            test_samples.append(test_slice)
+
             # Safety Check
-            if len(pool) < (train_per_type + val_target_count):
-                print(f"⚠️ Warning: Insufficient data for {ccnc}-{itype}. Requested {train_per_type + val_target_count}, have {len(pool)}")
+            if len(pool) < end_test_idx:
+                print(f"Warning: Insufficient data for {ccnc}-{itype}. Requested {end_test_idx}, have {len(pool)}")
 
     # 3. Finalize and Shuffle
-    train_df = pd.concat(train_samples).sample(frac=1).reset_index(drop=True)
-    val_df = pd.concat(val_samples).sample(frac=1).reset_index(drop=True)
+    train_df = pd.concat(train_samples).sample(frac=1, random_state=42).reset_index(drop=True)
+    val_df = pd.concat(val_samples).sample(frac=1, random_state=42).reset_index(drop=True)
+    test_df = pd.concat(test_samples).sample(frac=1, random_state=42).reset_index(drop=True)
     
     # --- Final Audit ---
-    print(f" Split Complete. Overlap Check: {len(pd.merge(train_df, val_df, how='inner'))} shared events.")
-    print(f"\n[Validation Set Physics Profile]")
+    print("Split Complete. Overlap Checks:")
+    print(f"  - Train/Val shared events:  {len(pd.merge(train_df, val_df, how='inner'))}")
+    print(f"  - Train/Test shared events: {len(pd.merge(train_df, test_df, how='inner'))}")
+    print(f"  - Val/Test shared events:   {len(pd.merge(val_df, test_df, how='inner'))}")
+    
+    print("\n[Validation Set Physics Profile]")
     print(f"CC/NC Ratio: {val_df['CCNC'].value_counts(normalize=True).to_dict()}")
     print(f"Interaction Type Ratios:\n{val_df['IntType'].value_counts(normalize=True)}")
+
+    print("\n[Testing Set Physics Profile]")
+    print(f"CC/NC Ratio: {test_df['CCNC'].value_counts(normalize=True).to_dict()}")
+    print(f"Interaction Type Ratios:\n{test_df['IntType'].value_counts(normalize=True)}")
     
-    return train_df, val_df
+    return train_df, val_df, test_df

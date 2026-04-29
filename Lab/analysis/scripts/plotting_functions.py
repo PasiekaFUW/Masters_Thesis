@@ -605,7 +605,7 @@ def plotROC(df, label_col='CCNC', prob_col='Prob_is_CC', model_name="1DCNN", ax=
     return ax
 
 
-def plotFeatureImportance(model, data_batch, feature_map=FEATURE_INDEX_MAP, title="Feature Dependency (Saliency Map)"):
+def plotFeatureImportance(model, data_batch, feature_map=FEATURE_INDEX_MAP, title="Feature Dependency (Saliency Map)", ax=None):
     import tensorflow as tf
     import numpy as np
     import matplotlib.pyplot as plt
@@ -624,14 +624,15 @@ def plotFeatureImportance(model, data_batch, feature_map=FEATURE_INDEX_MAP, titl
     grads = tape.gradient(predictions, input_tensor)
     
     # Average the absolute gradient magnitude across the batch
-    # This gives us a global sense of which features "move the needle" most
     importance = tf.reduce_mean(tf.abs(grads), axis=0).numpy().flatten()
     
     # 2. Map indices to names
     feature_names = [feature_map.get(i, f"feat_{i}") for i in range(len(importance))]
 
     # 3. Plotting
-    fig, ax = plt.subplots(figsize=(10, 5))
+    # If no ax is provided, create a new figure and ax
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 5))
     
     # Using a horizontal bar chart often makes long physics labels easier to read
     bars = ax.barh(feature_names, importance, color='teal', edgecolor='black', alpha=0.8)
@@ -644,7 +645,7 @@ def plotFeatureImportance(model, data_batch, feature_map=FEATURE_INDEX_MAP, titl
     # Invert y-axis so the first feature (index 0) is at the top
     ax.invert_yaxis() 
     
+    # Note: Removed plt.show() so the ax remains active and modifiable
     plt.tight_layout()
-    plt.show()
     
     return ax
