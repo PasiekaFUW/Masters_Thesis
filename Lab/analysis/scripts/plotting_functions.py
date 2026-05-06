@@ -2,6 +2,7 @@ def plot_physics_single_canva(dfs, mode, feature='multiplicity', titles=["All (C
     import numpy as np
     import matplotlib.pyplot as plt
     import pandas as pd
+    from matplotlib.ticker import MaxNLocator
 
     plot_data = []
     active_titles = []
@@ -60,22 +61,36 @@ def plot_physics_single_canva(dfs, mode, feature='multiplicity', titles=["All (C
         # Use the original index to pick the color
         original_idx = color_indices[idx]
         c = full_color_list[original_idx % len(full_color_list)]
+        
+        # --- Z-Order Logic ---
+        # Higher zorder means it renders on top. 
+        # 3 for Signal (CC), 2 for Background (NC), 1 for 'All'
+        if original_idx == 1:   
+            z_layer = 3
+        elif original_idx == 2: 
+            z_layer = 2
+        else:                   
+            z_layer = 1
             
         if feature == 'multiplicity':
             ax.hist(data, bins=common_bins, color=c, edgecolor='black', 
-                     alpha=0.5, density=density, rwidth=0.8, label=title)
-            ax.set_xticks(range(int(max_val) + 1))
+                     alpha=0.5, density=density, rwidth=0.8, label=title, zorder=z_layer)
+            ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+            # ax.set_xticks(range(int(max_val) + 1))
         else:
             ax.hist(data, bins=common_bins, color=c, edgecolor=c, 
-                     alpha=0.5, density=density, label=title, histtype='stepfilled')
+                     alpha=0.5, density=density, label=title, histtype='stepfilled', zorder=z_layer)
+            # Added a tiny fractional increase to zorder so the outline strictly stays on top of its own fill
             ax.hist(data, bins=common_bins, color=c, 
-                     density=density, histtype='step', linewidth=1.5)
+                     density=density, histtype='step', linewidth=1.5, zorder=z_layer+0.1)
 
     # Formatting 
     ax.set_title(f"{mode.upper()} - {feature.replace('_', ' ').capitalize()}")
     ax.set_xlabel(x_label)
     ax.set_ylabel("Prob. Density" if density else "Count")
-    ax.grid(axis='both', linestyle=':', alpha=0.6)
+    
+    # Push the grid to the very back using zorder=0
+    ax.grid(axis='both', linestyle=':', alpha=0.6, zorder=0) 
     ax.legend()
     
     return ax
@@ -89,7 +104,8 @@ def plot_physics_results(df, column='CCNC', ccnc_filter=None, int_filter=None, a
     int_filter: 'DIS', 'RES', 'QES', 'MEC' (Strings)
     """
     # 1. Apply Filters
-    subset = df.copy()
+    # subset = df.copy()
+    subset = df
     
     # Check for None specifically so that '0' (NC) doesn't get skipped
     if ccnc_filter is not None:
@@ -221,18 +237,25 @@ def plot_feature_from_dataset(dataset, feature_idx, feature_list=FEATURE_INDEX_M
     if is_discrete:
         common_bins = np.arange(0, int(max_val) + 2) - 0.5
         rwidth = 0.8
-        ax.set_xticks(range(int(max_val) + 1))
+        # ax.set_xticks(range(int(max_val) + 1))
+        from matplotlib.ticker import MaxNLocator
+        # integer=True ensures it won't show 1.5, 2.5, etc.
+        # prune='lower' can be used if 0 is crowded, but usually not needed
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True, nbins='auto'))
+        
+        # Optional: Ensure we don't zoom out too far past the actual data
+        ax.set_xlim(-0.5, max_val + 0.5)
     else:
         common_bins = np.linspace(min_val, max_val, 60)
         rwidth = 1.0
 
     # 2. Plotting using the Green/Blue theme
     ax.hist(nc_data, bins=common_bins, label='NC (0)', 
-            color='green', alpha=0.4, edgecolor='green', 
+            color='green', alpha=0.5, edgecolor='green', 
             density=density, rwidth=rwidth, histtype='stepfilled')
     
     ax.hist(cc_data, bins=common_bins, label='CC (1)', 
-            color='blue', alpha=0.4, edgecolor='blue', 
+            color='blue', alpha=0.5, edgecolor='blue', 
             density=density, rwidth=rwidth, histtype='stepfilled')
 
     # Formatting
@@ -243,6 +266,8 @@ def plot_feature_from_dataset(dataset, feature_idx, feature_list=FEATURE_INDEX_M
     ax.legend()
     
     return ax
+
+
 
 def plotTrainHistory(history):
   import matplotlib.pyplot as plt

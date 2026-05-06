@@ -1,0 +1,9 @@
+Author: Grzegorz Jędrzejowski 
+Supervision: prof. Katarzyna Grzelak
+
+1. The idea behind this project was to create a 1DCNN to classify high level signal, from Genie Generator simulating Dune Experiment, into two classes NC and CC. 
+2. The first step is to set up the container. I used: genie_3_6_2_pythia8_only with standard configuration. 
+3. Another step was to generate the data. Scripts that were used can be found in Generators/ and require splines generated prior, and dune physical flux in the .root format. 
+4. Generated .root files need to be transformed to the gtrac.root, which was done using convertEvents.sh script. 
+5. Such obtained gtracs were transformed to CSV in the raw form for prototyping (scripts/convert_full_nodebug) or with preprocess for training (scripts/convert_big_data and scripts/process_all_nc.py).
+6. Obtained CSV files were directly used in the NN.ipynb that contains ML pipeline for the mentioned classification process. The dataVisualize.ipynb contains in depth dives into generated data, mainly the validation set used in training, and was used for feature selection. 
