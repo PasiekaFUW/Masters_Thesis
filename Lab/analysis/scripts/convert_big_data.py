@@ -6,6 +6,8 @@ import time
 import re
 start_time = time.time()
 
+# import analysis.scripts.preprocess_functions as prf
+
 #neutral_particles = [-12, 12, -14, 14, -16, 16, -2112, 2112, -111, 111, -3122, 3122, -3212, 3212,
 #                        -421, 421, -311, 311, -130, 130, 2000000101, 1000180400, 130, 310, 3322, -3322,# 221, 331, 443]
 
@@ -225,3 +227,25 @@ def process_massive_csv_in_chunks(input_csv, output_csv, chunk_size=100000):
         chunk.to_csv(output_csv, mode='a', index=False, header=False)
 
     print(f"Finished! Cleaned data saved to {output_csv}")
+
+
+
+# def build_offline_combined_set(path_cc, path_nc, output_path):
+#     print("Loading CC dataset...")
+#     df_cc = pd.read_csv(path_cc)
+    
+#     print("Loading NC dataset...")
+#     df_nc = pd.read_csv(path_nc)
+    
+#     print("Merging datasets...")
+#     # Using your existing function to combine them
+#     df_combined = prf.prepare_combined_pool(df_cc, df_nc)
+    
+#     print("Filling NaNs...")
+#     # Filling NaNs offline so the training script doesn't have to
+#     df_combined = prf.fill_nans(df_combined)
+    
+    
+#     print(f"Saving merged dataset to {output_path}...")
+#     df_combined.to_csv(output_path, index=False)
+#     print("Offline preparation complete!")

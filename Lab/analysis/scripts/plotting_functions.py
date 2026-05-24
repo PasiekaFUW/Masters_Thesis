@@ -1,4 +1,4 @@
-def plot_physics_single_canva(dfs, mode, feature='multiplicity', titles=["All (CC+NC)", "Signal CC", "Background NC"], ax=None, density=True):
+def plot_physics_single_canva(dfs, mode, feature='multiplicity', titles=["All (CC+NC)", "Signal CC", "Background NC"], ax=None, density=True, full_color_list = ['gray', 'blue', 'green', 'darkorange', 'purple', 'cyan']):
     import numpy as np
     import matplotlib.pyplot as plt
     import pandas as pd
@@ -51,7 +51,7 @@ def plot_physics_single_canva(dfs, mode, feature='multiplicity', titles=["All (C
         fig, ax = plt.subplots(figsize=(10, 6))
 
     # Colors mapped to your original list: 0:Gray, 1:Blue, 2:Green
-    full_color_list = ['gray', 'blue', 'green', 'darkorange', 'purple', 'cyan']
+    # full_color_list = ['gray', 'blue', 'green', 'darkorange', 'purple', 'cyan']
     
     # We need to pick the color based on the original index in 'dfs'
     # so that CC is always blue and NC is always green
@@ -425,3 +425,75 @@ def plotFeatureImportance(model, data_batch, feature_map=FEATURE_INDEX_MAP, titl
     plt.tight_layout()
     
     return ax
+
+def plotPRCurve(df, label_col='CCNC', prob_col='Prob_is_CC', model_name="1DCNN", ax=None, color='teal', thresholds_to_plot=None):
+    from sklearn.metrics import PrecisionRecallDisplay, average_precision_score, precision_recall_curve
+    import matplotlib.pyplot as plt
+    import numpy as np
+    
+    # Set default thresholds to plot if none are provided
+    if thresholds_to_plot is None:
+        thresholds_to_plot = [0.3, 0.5, 0.7]
+        
+    # 1. Map labels to integers
+    mapping = {"NC": 0, "CC": 1}
+    y_true = df[label_col].map(mapping).fillna(df[label_col]).astype(int)
+    y_score = df[prob_col]
+
+    # 2. Create axis if not provided (allows for subplots)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(6, 6))
+
+    # 3. Plotting the main PR curve
+    # Note: Scikit-learn's plotting function handles the PR curve directly
+    PrecisionRecallDisplay.from_predictions(
+        y_true, 
+        y_score, 
+        name=model_name,
+        color=color,
+        ax=ax
+    )
+
+    # 4. Extract arrays to plot threshold points
+    precision, recall, thresholds = precision_recall_curve(y_true, y_score)
+
+    # 5. Find and plot specific decision thresholds
+    if thresholds_to_plot:
+        for thresh in thresholds_to_plot:
+            # Find the index of the threshold closest to our target
+            idx = np.argmin(np.abs(thresholds - thresh))
+            
+            # Scikit-learn's precision_recall_curve returns thresholds array with length 1 less than precision/recall arrays.
+            # The indices align, so we use idx.
+            ax.scatter(recall[idx], precision[idx], marker='o', s=60, edgecolors='black', zorder=5, label=f'Thr ≈ {thresh}')
+            
+            # Annotate the point on the graph
+            ax.annotate(f"{thresh}", 
+                        (recall[idx], precision[idx]), 
+                        textcoords="offset points", 
+                        xytext=(10, 10), # Offset shifted up for PR curve aesthetics
+                        ha='center',
+                        fontsize=9)
+
+    # 6. Add the "Chance" baseline 
+    # For PR curves, chance is a horizontal line at P = (Positive Samples / Total Samples)
+    baseline = y_true.sum() / len(y_true)
+    ax.plot([0, 1], [baseline, baseline], "k--", label=f"Chance ({baseline:.2f})")
+
+    ax.set_title(f"Precision-Recall Curve - {model_name}")
+    ax.set_xlabel("Recall (True Positive Rate)")
+    ax.set_ylabel("Precision (Positive Predictive Value)")
+    
+    # Optional: adjust legend to not cover the curve
+    ax.legend(loc='lower left')
+    ax.grid(alpha=0.3)
+
+    # 7. Print score and return the axis
+    # average_precision_score is the standard way to calculate the area under the PR curve in sklearn
+    pr_auc_value = average_precision_score(y_true, y_score)
+    print(f"{model_name} PR AUC: {pr_auc_value:.4f}")
+    
+    return ax
+
+
+    
