@@ -99,7 +99,7 @@ def plot_physics_results(df, column='CCNC', ccnc_filter=None, int_filter=None, a
     import matplotlib.pyplot as plt
     import numpy as np
     """
-    column: 'CCNC', 'IntType', 'Prob_is_CC', or 'NN_Decision_CC'
+    column: 'CCNC', 'IntType', 'Prob_is_CC', or 'NN_Decision_CC' + ensemble equivalents
     ccnc_filter: 1 or 0 (after transformation)
     int_filter: 'DIS', 'RES', 'QES', 'MEC' (Strings)
     """
@@ -124,7 +124,7 @@ def plot_physics_results(df, column='CCNC', ccnc_filter=None, int_filter=None, a
         return ax
 
     # 3. Categorical Plots (CCNC, IntType, NN_Decision_CC)
-    if column in ['CCNC', 'IntType', 'NN_Decision_CC']:
+    if column in ['CCNC', 'IntType', 'NN_Decision_CC', 'NN_Decision_CC_ensemble']:
         labels, counts = np.unique(subset[column], return_counts=True)
         
         display_counts = counts.astype(float)
@@ -140,7 +140,7 @@ def plot_physics_results(df, column='CCNC', ccnc_filter=None, int_filter=None, a
         ax.set_title(f"Distribution of {column}")
 
     # 4. Probability Plots (Separation Power)
-    elif column == 'Prob_is_CC':
+    elif column == 'Prob_is_CC' or column == 'Prob_is_CC_ensemble':
         if bins is None:
             bins = np.linspace(0, 1, 41)
         
